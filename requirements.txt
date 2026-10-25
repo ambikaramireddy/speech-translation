@@ -1,0 +1,10 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+pydantic-settings==2.8.1
+python-multipart==0.0.20
+pydub==0.25.1
+python-dotenv==1.0.1
+pytest==8.3.5
+pytest-asyncio==0.25.3
+sacrebleu==2.5.1

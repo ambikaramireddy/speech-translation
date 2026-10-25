@@ -1,0 +1,22 @@
+[
+  {"source":"Hello, how are you?","target":"नमस्ते, आप कैसे हैं?","source_lang":"en","target_lang":"hi"},
+  {"source":"Good morning.","target":"शुभ प्रभात।","source_lang":"en","target_lang":"hi"},
+  {"source":"Thank you for your help.","target":"आपकी मदद के लिए धन्यवाद।","source_lang":"en","target_lang":"hi"},
+  {"source":"Please send me the report today.","target":"कृपया आज मुझे रिपोर्ट भेजें।","source_lang":"en","target_lang":"hi"},
+  {"source":"The meeting starts at ten o'clock.","target":"बैठक दस बजे शुरू होती है।","source_lang":"en","target_lang":"hi"},
+  {"source":"We need to improve customer service.","target":"हमें ग्राहक सेवा में सुधार करने की आवश्यकता है।","source_lang":"en","target_lang":"hi"},
+  {"source":"The train is running late.","target":"ट्रेन देर से चल रही है।","source_lang":"en","target_lang":"hi"},
+  {"source":"Could you repeat that, please?","target":"क्या आप कृपया इसे दोहरा सकते हैं?","source_lang":"en","target_lang":"hi"},
+  {"source":"I will call you tomorrow.","target":"मैं आपको कल फोन करूंगा।","source_lang":"en","target_lang":"hi"},
+  {"source":"The office is closed on Sunday.","target":"रविवार को कार्यालय बंद रहता है।","source_lang":"en","target_lang":"hi"},
+  {"source":"आपका दिन शुभ हो।","target":"Have a nice day.","source_lang":"hi","target_lang":"en"},
+  {"source":"कृपया अपना नाम बताइए।","target":"Please tell me your name.","source_lang":"hi","target_lang":"en"},
+  {"source":"मुझे यह जानकारी चाहिए।","target":"I need this information.","source_lang":"hi","target_lang":"en"},
+  {"source":"हम कल सुबह निकलेंगे।","target":"We will leave tomorrow morning.","source_lang":"hi","target_lang":"en"},
+  {"source":"यह सेवा बहुत उपयोगी है।","target":"This service is very useful.","source_lang":"hi","target_lang":"en"},
+  {"source":"क्या आप मेरी मदद कर सकते हैं?","target":"Can you help me?","source_lang":"hi","target_lang":"en"},
+  {"source":"कृपया दरवाज़ा बंद कर दें।","target":"Please close the door.","source_lang":"hi","target_lang":"en"},
+  {"source":"मुझे समय पर पहुंचना है।","target":"I need to arrive on time.","source_lang":"hi","target_lang":"en"},
+  {"source":"बैठक दोपहर में होगी।","target":"The meeting will be in the afternoon.","source_lang":"hi","target_lang":"en"},
+  {"source":"आपकी प्रतिक्रिया के लिए धन्यवाद।","target":"Thank you for your feedback.","source_lang":"hi","target_lang":"en"}
+]
