@@ -147,7 +147,7 @@ The exact contents of `tests/` and `samples/` may differ depending on your imple
 - Python 3.10 or a compatible version supported by the installed dependencies.
 - An AudicLabs API key with the required STT and TTS permissions and available credits.
 - A translation provider configured for the selected translator implementation.
-- FFmpeg if required for audio conversion or joining.
+- The pinned `imageio-ffmpeg` dependency supplies FFmpeg for joining synthesized sentence audio; a separate system FFmpeg installation is not required.
 - Internet access for external API requests.
 
 ## Installation

@@ -1,11 +1,14 @@
 import hashlib, io, re, time
 from pathlib import Path
 from pydub import AudioSegment
+import imageio_ffmpeg
 from .audiclabs import AudicLabsClient
 from .cache import Cache
 from .config import Settings
 from .errors import ServiceError
 from .translator import Translator
+
+AudioSegment.converter = imageio_ffmpeg.get_ffmpeg_exe()
 
 def split_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?।])\s+", text.strip()) if s.strip()]
