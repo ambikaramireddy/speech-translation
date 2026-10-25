@@ -20,31 +20,90 @@ The project is designed around AudicLabs Speech-to-Text (STT) and Text-to-Speech
 
 ## Architecture
 
-The service follows a pipeline architecture:
+### System Overview
+
+This project is a backend-only Speech Translation API built with Python and FastAPI. It accepts audio or text, transcribes speech using the AudicLabs Speech-to-Text (STT) API, translates the text through a pluggable translation provider, and optionally converts the translated text into speech using the AudicLabs Text-to-Speech (TTS) API.
+
+### Architecture Diagram
 
 ```text
-Audio Upload
-     |
-     v
-FastAPI Application
-     |
-     v
-AudicLabs Speech-to-Text
-     |
-     v
-Translation Adapter
-     |
-     v
-Translated Text
-     |
-     +------------------+
-     |                  |
-     v                  v
- Return Text       AudicLabs Text-to-Speech
-                        |
-                        v
-                  Generated Audio
+                 Client / Swagger UI
+                         |
+                         v
+                    FastAPI App
+                         |
+          +--------------+--------------+
+          |              |              |
+          v              v              v
+   Translate Speech  Translate Text    Speak
+          |              |              |
+          v              v              |
+   AudicLabs STT          |              |
+          |              |              |
+          +-------+------+              |
+                  |                     |
+                  v                     |
+           Translation Provider         |
+                  |                     |
+                  v                     |
+           Translated Text -------------+
+                  |                     |
+                  v                     v
+             API Response         AudicLabs TTS
+                                        |
+                                        v
+                                  Audio Response
+
+      Supporting Components:
+      - Configuration and environment variables
+      - Translation/audio cache
+      - Error handling and request logging
+      - Language/model/voice lookups
+      - Background jobs for long-running requests
+      - Tests and evaluation samples
 ```
+
+### Main Components
+
+| Component | Responsibility |
+|---|---|
+| `app/main.py` | Defines FastAPI routes and API responses. |
+| `app/audiclabs.py` | Handles requests to AudicLabs STT and TTS APIs. |
+| `app/translator.py` | Provides the translation-provider integration. |
+| `app/pipeline.py` | Coordinates transcription, translation, and optional speech generation. |
+| `app/cache.py` | Caches reusable translation or audio results. |
+| `app/config.py` | Loads configuration and environment variables. |
+| `app/errors.py` | Handles API errors and returns consistent error responses. |
+| `app/evaluate.py` | Supports translation evaluation. |
+| `tests/` | Contains automated tests. |
+| `samples/` | Stores sample inputs and outputs. |
+| `data/` | Stores runtime data or generated files, depending on configuration. |
+
+### API Workflow
+
+1. The client submits audio or text through a FastAPI endpoint.
+2. For audio input, the backend sends the audio to AudicLabs STT to obtain a transcript.
+3. The translation provider translates the transcript or submitted text into the target language.
+4. If speech output is requested, the backend sends the translated text to AudicLabs TTS.
+5. The API returns the transcript, translated text, and—when requested—an audio URL or audio response, according to the endpoint implementation.
+
+### API Endpoints
+
+- `GET /health` — checks service health.
+- `GET /v1/languages` — returns supported language information.
+- `POST /v1/translate-text` — translates submitted text.
+- `POST /v1/speak` — generates speech from text.
+- `POST /v1/translate-speech` — transcribes, translates, and optionally generates speech.
+- `GET /v1/jobs/{job_id}` — checks the status of an asynchronous job.
+- `GET /v1/audio/{audio_id}.mp3` — retrieves generated audio.
+
+### Configuration and Security
+
+API credentials and provider settings are loaded from environment variables or a local `.env` file. The `.env` file must not be committed to version control. Use `.env.example` to document required configuration without including real credentials.
+
+### Testing and Documentation
+
+FastAPI provides interactive API documentation at `/docs`. Automated tests are located in `tests/` and should mock external
 
 ### Technology stack
 
