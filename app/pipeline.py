@@ -11,7 +11,15 @@ def split_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?।])\s+", text.strip()) if s.strip()]
 
 def language_code(value: str) -> str:
-    return value.lower().split("-")[0]
+    if isinstance(value, dict):
+        value = value.get("code") or value.get("language") or value.get("locale") or ""
+    normalized = str(value or "").strip().lower().replace("_", "-")
+    if normalized.startswith("english"):
+        return "en"
+    if normalized.startswith("hindi"):
+        return "hi"
+    code = normalized.split("-", 1)[0]
+    return {"eng": "en", "hin": "hi"}.get(code, code)
 
 class Pipeline:
     def __init__(self, settings: Settings, client: AudicLabsClient, translator: Translator, cache: Cache):
@@ -52,8 +60,13 @@ class Pipeline:
         stt=round(time.perf_counter()-st,4)
         text=transcript.get("text")
         if not isinstance(text,str) or not text.strip(): raise ServiceError(422,"Speech service could not find readable speech in this audio.")
-        detected=transcript.get("language") or (None if source=="auto" else source)
-        translated, translation_time=await self.translate_text(text, detected or source, target, glossary)
+        detected_value=transcript.get("language")
+        if isinstance(detected_value, dict):
+            detected_value=detected_value.get("code") or detected_value.get("language") or detected_value.get("locale")
+        detected=str(detected_value).strip() if detected_value else (None if source=="auto" else source)
+        if not detected:
+            raise ServiceError(422,"Could not detect the source language. Set source_lang to en or hi and retry.")
+        translated, translation_time=await self.translate_text(text, detected, target, glossary)
         audio_url=None; tts_time=0
         if output in ("audio","both"):
             if not voice: raise ServiceError(422,"A target-language voice is required for audio output.")
