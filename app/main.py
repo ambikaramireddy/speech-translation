@@ -28,7 +28,10 @@ class TextRequest(BaseModel):
 class SpeakRequest(BaseModel):
     text: str = Field(min_length=1, examples=["नमस्ते, आपकी बैठक में स्वागत है।"])
     language: str = Field(examples=["hi-IN"])
-    voice: str = Field(description="Voice ID returned by the AudicLabs voices lookup.")
+    voice: str = Field(description="Voice ID listed by GET /v1/languages. Do not enter spoken text or the placeholder 'string'.")
+
+class AudioResponse(BaseModel):
+    audio_url: str = Field(description="Use the returned URL to retrieve the generated MP3.")
 
 class SpeechResponse(BaseModel):
     source_transcript: str
@@ -74,18 +77,37 @@ async def _default_voice(target:str):
         if isinstance(item,dict) and _voice_lang(item)==wanted: return str(item.get("id") or item.get("voice_id") or "")
     raise ServiceError(422,"No AudicLabs voice is available for the requested target language.")
 
+async def _validate_voice(voice:str,target:str):
+    _,_,voices=await _catalogs(); wanted=language_code(target)
+    for item in voices:
+        if isinstance(item,str):
+            if item==voice: return
+            continue
+        if not isinstance(item,dict): continue
+        voice_id=str(item.get("id") or item.get("voice_id") or "")
+        if voice_id!=voice: continue
+        voice_language=_voice_lang(item)
+        if voice_language and voice_language!=wanted:
+            raise ServiceError(422,"The selected voice does not match the requested language. Choose a matching voice from GET /v1/languages.")
+        return
+    raise ServiceError(422,"Unknown voice ID. Choose a voice listed by GET /v1/languages.")
+
 async def _execute(path:Path,source:str,target:str,output:str,glossary:dict,voice:str|None):
     try:
         chosen=voice
-        if output in ("audio","both") and not chosen: chosen=await _default_voice(target)
+        if output in ("audio","both"):
+            if not chosen: chosen=await _default_voice(target)
+            await _validate_voice(chosen,target)
         return await pipeline.translate_speech(path,source,target,output,glossary,chosen)
     except ServiceError: raise
     finally:
         path.unlink(missing_ok=True)
 
 async def _save_upload(file:UploadFile)->Path:
+    suffix=Path(file.filename or "audio.bin").suffix[:12].lower()
+    if suffix in {".mp4",".mov",".avi",".mkv"} or (file.content_type or "").lower().startswith("video/"):
+        raise ServiceError(415,"This endpoint accepts audio files, not video. Extract the video's audio as WAV or MP3 and upload that file.")
     settings.audio_dir.mkdir(parents=True,exist_ok=True)
-    suffix=Path(file.filename or "audio.bin").suffix[:12]
     fd,raw=tempfile.mkstemp(prefix="input-",suffix=suffix,dir=settings.audio_dir)
     total=0
     try:
@@ -126,25 +148,26 @@ async def translate_text(body:TextRequest):
         return {"source_text":body.text,"translated_text":translated,"source_lang":body.source_lang,"target_lang":body.target_lang,"timings":{"translation_seconds":seconds}}
     except ServiceError as exc: _http_error(exc)
 
-@app.post("/v1/speak",summary="Synthesize speech using an AudicLabs voice")
+@app.post("/v1/speak",response_model=AudioResponse,summary="Synthesize speech using an AudicLabs voice")
 async def speak(body:SpeakRequest):
     try:
+        await _validate_voice(body.voice,body.language)
         filename,_=await pipeline.synthesize(body.text,body.language,body.voice)
         return {"audio_url":f"/v1/audio/{filename}"}
     except ServiceError as exc: _http_error(exc)
 
-@app.get("/v1/audio/{filename}")
+@app.get("/v1/audio/{filename}",summary="Download generated MP3 by filename",description="Use only the filename returned in audio_url by /v1/speak or /v1/translate-speech. Do not enter a local Windows file path.",response_class=FileResponse,responses={200:{"content":{"audio/mpeg":{"schema":{"type":"string","format":"binary"}}}}})
 async def get_audio(filename:str):
-    if Path(filename).name!=filename or not filename.endswith(".mp3"): raise HTTPException(404,"Audio not found.")
+    if Path(filename).name!=filename or not filename.endswith(".mp3"): raise HTTPException(404,"Audio not found. Supply the MP3 filename returned in audio_url.")
     path=settings.audio_dir/filename
-    if not path.is_file(): raise HTTPException(404,"Audio not found.")
+    if not path.is_file(): raise HTTPException(404,"Audio not found. First generate speech, then use its audio_url filename.")
     return FileResponse(path,media_type="audio/mpeg",filename=filename)
 
 @app.post("/v1/translate-speech",response_model=SpeechResponse,summary="Translate speech to text and optional translated speech",
-          responses={202:{"description":"Async job accepted; poll /v1/jobs/{job_id}."}})
-async def translate_speech(file:Annotated[UploadFile,File(description="Audio file, up to configured limit")],
+          responses={202:{"description":"Async job accepted; poll /v1/jobs/{job_id}."},415:{"description":"Video upload rejected; extract and upload its audio."}})
+async def translate_speech(file:Annotated[UploadFile,File(description="Audio file only, up to configured limit. Extract audio from MP4/video files before uploading.")],
     source_lang:Annotated[str,Form()]= "auto", target_lang:Annotated[str,Form()]= "hi", output:Annotated[Literal["text","audio","both"],Form()]= "both",
-    glossary_json:Annotated[str,Form()]= "{}", voice:Annotated[str|None,Form()]=None,
+    glossary_json:Annotated[str,Form()]= "{}", voice:Annotated[str|None,Form(description="Optional voice ID from GET /v1/languages. Leave blank for output=text.")]=None,
     async_mode:Annotated[bool,Query(description="Queue as an async job")]=False):
     try:
         glossary=json.loads(glossary_json)

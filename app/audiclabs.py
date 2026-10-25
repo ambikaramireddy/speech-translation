@@ -11,11 +11,11 @@ class AudicLabsClient:
     def _headers(self):
         if not self.settings.audiclabs_api_key: raise ServiceError(503, "Speech service is not configured. Set AUDICLABS_API_KEY.")
         return {"Authorization": f"Bearer {self.settings.audiclabs_api_key}"}
-    async def _check(self, response: httpx.Response):
+    async def _check(self, response: httpx.Response, operation: str):
         request_id = response.headers.get("X-Request-Id", "unavailable")
-        log.info("AudicLabs request status=%s request_id=%s", response.status_code, request_id)
+        log.info("AudicLabs operation=%s status=%s request_id=%s", operation, response.status_code, request_id)
         if response.is_error:
-            raise map_upstream_error(response.status_code, response.headers.get("Retry-After"))
+            raise map_upstream_error(response.status_code, response.headers.get("Retry-After"), operation)
     async def transcribe(self, path: Path, language: str | None) -> dict:
         data = {"model": "audic-stt-1"}
         if language and language != "auto": data["language"] = language
@@ -26,7 +26,7 @@ class AudicLabsClient:
                         files={"file": (path.name, file, "application/octet-stream")})
         except httpx.RequestError:
             raise ServiceError(503, "Could not connect to the speech service. Please retry shortly.")
-        await self._check(response)
+        await self._check(response, "stt")
         try: return response.json()
         except ValueError: raise ServiceError(502, "Speech service returned invalid transcription data.")
     async def speak(self, text: str, voice: str, language: str) -> bytes:
@@ -36,7 +36,7 @@ class AudicLabsClient:
                     json={"model": "audic-tts-1", "input": text, "voice": voice, "language": language, "stream": False})
         except httpx.RequestError:
             raise ServiceError(503, "Could not connect to the speech service. Please retry shortly.")
-        await self._check(response)
+        await self._check(response, "tts")
         return response.content
     async def lookup(self, endpoint: str):
         try:
@@ -44,5 +44,5 @@ class AudicLabsClient:
                 response = await client.get(f"{self.settings.audiclabs_base_url}/{endpoint}", headers=self._headers())
         except httpx.RequestError:
             raise ServiceError(503, "Could not connect to the speech service. Please retry shortly.")
-        await self._check(response)
+        await self._check(response, "lookup")
         return response.json()
